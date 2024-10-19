@@ -4,6 +4,8 @@
 
 The **Nutrition Tracker Bot** is a Telegram bot designed to help users track daily nutrition intake, including calories, proteins, fats, carbohydrates, and water. The bot also supports time zone and language adjustments, and calculates daily nutritional needs based on user-specific parameters.
 
+[**Start using the Nutrition Tracker Bot**](https://t.me/nutrition_tracker_365_bot)
+
 ## Features
 
 - Track calorie and water intake.
@@ -18,43 +20,43 @@ The **Nutrition Tracker Bot** is a Telegram bot designed to help users track dai
 
 Initializes the bot and registers the user.
 
-### `/set_info <calories> <protein> <fat> <carbs> <water>`
+### `/set <calories> <protein> <fat> <carbs> <water>`
 
 Sets daily nutritional targets for the user.
 
-### `/add_food <grams_eaten> <protein_per_100g> <fat_per_100g> <carbs_per_100g> [comment]`
+### `/food <grams_eaten> <protein_per_100g> <fat_per_100g> <carbs_per_100g> [comment]`
 
 Logs a food entry with nutritional details.
 
-### `/add_water <liters>`
+### `/water <liters>`
 
 Logs the amount of water consumed.
 
-### `/get_daily_log [date]`
+### `/log [date]`
 
 Retrieves the user's food and water logs for a specific day.
 
-### `/calculate_info <age> <weight> <height> <metabolism> <activity> <goal> <desire> <diet_type> <gender> <body_fat> <climate> <rhr>`
+### `/calc <age> <weight> <height> <metabolism> <activity> <goal> <desire> <diet_type> <gender> <body_fat> <climate> <rhr>`
 
 Calculates personalized daily nutritional needs.
 
-### `/set_timezone <timezone>`
+### `/time <timezone>`
 
 Sets the user's time zone for accurate logging.
 
-### `/set_language <en/ru>`
+### `/lang <en/ru>`
 
 Changes the bot's language between English and Russian.
 
-### `/get_daily_progress [date]`
+### `/progress [date]`
 
 Shows the user's daily progress towards nutritional goals.
 
-### `/user_count`
+### `/count`
 
 Displays the total number of registered users.
 
-### `/reset_daily_progress`
+### `/reset`
 
 Resets the user's daily progress for the current day.
 

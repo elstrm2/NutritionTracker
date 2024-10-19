@@ -81,9 +81,9 @@ else:
 
 translations = {
     "en": {
-        "start": "Hello! I will help you track calories and water. Enter your data with /set_info.",
+        "start": "Hello! I will help you track calories and water. Enter your data with /set.",
         "data_updated": "Data updated successfully!",
-        "enter_data_first": "Please enter your information first using /set_info.",
+        "enter_data_first": "Please enter your information first using /set.",
         "invalid_calories": "Invalid number of calories. Please enter a value between 10 and 100000.",
         "invalid_protein_fat_carbs": "Invalid amount of protein, fat, or carbs. Each should be between 0 and 100000.",
         "invalid_water": "Invalid amount of water. Please enter a value between 0.1 and 100 liters.",
@@ -97,20 +97,20 @@ translations = {
         "no_data_for_date": "No data for the specified date.",
         "invalid_comment": "The comment must be less than 100 characters.",
         "error_occurred": "An error occurred.",
-        "set_info_usage": "Usage: /set_info <calories> <protein> <fat> <carbs> <water>. Example: /set_info 2000 150 50 250 2.5",
+        "set_info_usage": "Usage: /set <calories> <protein> <fat> <carbs> <water>. Example: /set 2000 150 50 250 2.5",
         "add_food_usage": (
-            "Usage: /add_food <grams_eaten> <protein_per_100g> <fat_per_100g> <carbs_per_100g> [comment].\n"
-            "Example: /add_food 150 10 5 20 Delicious porridge."
+            "Usage: /food <grams_eaten> <protein_per_100g> <fat_per_100g> <carbs_per_100g> [comment].\n"
+            "Example: /food 150 10 5 20 Delicious porridge."
         ),
-        "set_timezone_usage": "Usage: /set_timezone <timezone>. Example: /set_timezone UTC+03",
-        "set_language_usage": "Usage: /set_language <en/ru>. Example: /set_language ru",
-        "add_water_usage": "Usage: /add_water <liters>. Example: /add_water 2.5",
-        "get_daily_log_usage": "Usage: /get_daily_log [date]. Example: /get_daily_log 2023-10-15",
+        "set_timezone_usage": "Usage: /time <timezone>. Example: /time UTC+03",
+        "set_language_usage": "Usage: /lang <en/ru>. Example: /lang ru",
+        "add_water_usage": "Usage: /water <liters>. Example: /water 2.5",
+        "get_daily_log_usage": "Usage: /log [date]. Example: /log 2023-10-15",
         "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD.",
         "food_entry": "Food: {calories} kcal, P: {protein}, F: {fat}, C: {carbohydrates}, Comment: {comment}",
         "water_entry": "Water: {water} liters",
         "calculate_info_usage": (
-            "Usage: /calculate_info <age> <weight> <height> <metabolism> <activity> <goal> <desire> <diet_type> <gender> <body_fat> <climate> <rhr>.\n\n"
+            "Usage: /calc <age> <weight> <height> <metabolism> <activity> <goal> <desire> <diet_type> <gender> <body_fat> <climate> <rhr>.\n\n"
             "Parameters:\n"
             "- age: Integer between 1 and 200.\n"
             "- weight: Float between 1 and 1000 (kg).\n"
@@ -125,8 +125,8 @@ translations = {
             "- climate: Integer -1 (cold), 0 (humid), 1 (hot), or '-' (optional).\n"
             "- rhr: Resting Heart Rate, integer between 40 and 140, or '-' (optional).\n\n"
             "Examples:\n"
-            "/calculate_info 30 70 175 5 5 -1 7 1 m 20 0 70\n"
-            "/calculate_info 25 60 160 - - - - 0 - - -"
+            "/calc 30 70 175 5 5 -1 7 1 m 20 0 70\n"
+            "/calc 25 60 160 - - - - 0 - - -"
         ),
         "invalid_age": "Invalid age. Please enter a value between 1 and 200.",
         "invalid_weight": "Invalid weight. Please enter a value between 1 and 1000.",
@@ -159,13 +159,13 @@ translations = {
             "Water: {water_drank} out of {water_total} liters (remaining: {water_remaining} liters)"
         ),
         "daily_food_and_water_log": "Detailed log of food and water intake for {date}:",
-        "get_daily_progress_usage": "Usage: /get_daily_progress [date]. Example: /get_daily_progress 2023-10-15",
+        "get_daily_progress_usage": "Usage: /progress [date]. Example: /progress 2023-10-15",
         "user_count_message": "The total number of users is {count}.",
     },
     "ru": {
-        "start": "Привет! Я помогу тебе отслеживать калории и воду. Введи свои данные через команду /set_info.",
+        "start": "Привет! Я помогу тебе отслеживать калории и воду. Введи свои данные через команду /set.",
         "data_updated": "Данные обновлены успешно!",
-        "enter_data_first": "Пожалуйста, сначала введи свои данные через команду /set_info.",
+        "enter_data_first": "Пожалуйста, сначала введи свои данные через команду /set.",
         "invalid_calories": "Неверное количество калорий. Пожалуйста, введи значение от 10 до 100000.",
         "invalid_protein_fat_carbs": "Неверное количество белков, жиров или углеводов. Каждое должно быть от 0 до 100000.",
         "invalid_water": "Неверное количество воды. Пожалуйста, введи значение от 0.1 до 100 литров.",
@@ -179,20 +179,20 @@ translations = {
         "no_data_for_date": "Нет данных за указанную дату.",
         "invalid_comment": "Комментарий должен быть меньше 100 символов.",
         "error_occurred": "Произошла ошибка.",
-        "set_info_usage": "Использование: /set_info <калории> <белки> <жиры> <углеводы> <вода>. Пример: /set_info 2000 150 50 250 2.5",
+        "set_info_usage": "Использование: /set <калории> <белки> <жиры> <углеводы> <вода>. Пример: /set 2000 150 50 250 2.5",
         "add_food_usage": (
-            "Использование: /add_food <съеденные_граммы> <белки_на_100г> <жиры_на_100г> <углеводы_на_100г> [комментарий].\n"
-            "Пример: /add_food 150 10 5 20 Вкусная каша."
+            "Использование: /food <съеденные_граммы> <белки_на_100г> <жиры_на_100г> <углеводы_на_100г> [комментарий].\n"
+            "Пример: /food 150 10 5 20 Вкусная каша."
         ),
-        "set_timezone_usage": "Использование: /set_timezone <часовой пояс>. Пример: /set_timezone UTC+03",
-        "set_language_usage": "Использование: /set_language <en/ru>. Пример: /set_language ru",
-        "add_water_usage": "Использование: /add_water <литры>. Пример: /add_water 2.5",
-        "get_daily_log_usage": "Использование: /get_daily_log [дата]. Пример: /get_daily_log 2023-10-15",
+        "set_timezone_usage": "Использование: /time <часовой пояс>. Пример: /time UTC+03",
+        "set_language_usage": "Использование: /lang <en/ru>. Пример: /lang ru",
+        "add_water_usage": "Использование: /water <литры>. Пример: /water 2.5",
+        "get_daily_log_usage": "Использование: /log [дата]. Пример: /log 2023-10-15",
         "invalid_date_format": "Неверный формат даты. Пожалуйста, используй формат ГГГГ-ММ-ДД.",
         "food_entry": "Еда: {calories} ккал, Б: {protein}, Ж: {fat}, У: {carbohydrates}, Комментарий: {comment}",
         "water_entry": "Вода: {water} литров",
         "calculate_info_usage": (
-            "Использование: /calculate_info <возраст> <вес> <рост> <метаболизм> <активность> <цель> <желание> <тип_диеты> <пол> <жирность_тела> <климат> <пульс_в_покое>.\n\n"
+            "Использование: /calc <возраст> <вес> <рост> <метаболизм> <активность> <цель> <желание> <тип_диеты> <пол> <жирность_тела> <климат> <пульс_в_покое>.\n\n"
             "Параметры:\n"
             "- возраст: Целое число от 1 до 200.\n"
             "- вес: Число с плавающей точкой от 1 до 1000 (кг).\n"
@@ -207,8 +207,8 @@ translations = {
             "- климат: Целое число -1 (холодный), 0 (влажный), 1 (жаркий), или '-' (опционально).\n"
             "- пульс_в_покое: Целое число от 40 до 140 или '-' (опционально).\n\n"
             "Примеры:\n"
-            "/calculate_info 30 70 175 5 5 -1 7 1 m 20 0 70\n"
-            "/calculate_info 25 60 160 - - - - 0 - - -"
+            "/calc 30 70 175 5 5 -1 7 1 m 20 0 70\n"
+            "/calc 25 60 160 - - - - 0 - - -"
         ),
         "invalid_age": "Неверный возраст. Пожалуйста, введи значение от 1 до 200.",
         "invalid_weight": "Неверный вес. Пожалуйста, введи значение от 1 до 1000.",
@@ -241,7 +241,7 @@ translations = {
             "Вода: выпито {water_drank} из {water_total} литров (осталось: {water_remaining} литров)"
         ),
         "daily_food_and_water_log": "Подробный отчет о потреблении пищи и воды за {date}:",
-        "get_daily_progress_usage": "Использование: /get_daily_progress [дата]. Пример: /get_daily_progress 2023-10-15",
+        "get_daily_progress_usage": "Использование: /progress [дата]. Пример: /progress 2023-10-15",
         "user_count_message": "Общее количество пользователей: {count}.",
     },
 }
@@ -394,10 +394,10 @@ async def start_command(message: types.Message):
         await message.reply(get_translation(user.language, "start"))
 
 
-@dp.message_handler(commands=["set_info"])
+@dp.message_handler(commands=["set"])
 async def set_info(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /set_info command with data: {message.text}"
+        f"User {message.from_user.id} issued /set command with data: {message.text}"
     )
     try:
         async with get_db_session() as session:
@@ -452,10 +452,10 @@ async def set_info(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["add_food"])
+@dp.message_handler(commands=["food"])
 async def add_food(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /add_food command with data: {message.text}"
+        f"User {message.from_user.id} issued /food command with data: {message.text}"
     )
     try:
         async with get_db_session() as session:
@@ -531,10 +531,10 @@ async def add_food(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["add_water"])
+@dp.message_handler(commands=["water"])
 async def add_water(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /add_water command with data: {message.text}"
+        f"User {message.from_user.id} issued /water command with data: {message.text}"
     )
     try:
         async with get_db_session() as session:
@@ -581,10 +581,10 @@ async def add_water(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["set_timezone"])
+@dp.message_handler(commands=["time"])
 async def set_timezone(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /set_timezone command with data: {message.text}"
+        f"User {message.from_user.id} issued /time command with data: {message.text}"
     )
     try:
         async with get_db_session() as session:
@@ -612,10 +612,10 @@ async def set_timezone(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["set_language"])
+@dp.message_handler(commands=["lang"])
 async def set_language(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /set_language command with data: {message.text}"
+        f"User {message.from_user.id} issued /lang command with data: {message.text}"
     )
     try:
         async with get_db_session() as session:
@@ -639,10 +639,10 @@ async def set_language(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["get_daily_log"])
+@dp.message_handler(commands=["log"])
 async def get_daily_log(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /get_daily_log command with data: {message.text}"
+        f"User {message.from_user.id} issued /log command with data: {message.text}"
     )
 
     try:
@@ -713,10 +713,10 @@ async def get_daily_log(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["calculate_info"])
+@dp.message_handler(commands=["calc"])
 async def calculate_info(message: types.Message):
     logger.debug(
-        f"User {message.from_user.id} issued /calculate_info command with data: {message.text}"
+        f"User {message.from_user.id} issued /calc command with data: {message.text}"
     )
 
     try:
@@ -983,7 +983,7 @@ async def calculate_info(message: types.Message):
                 100, round(weight * 0.035 * climate_multiplier * water_multiplier, 1)
             )
 
-            update_command = f"/set_info {round_value(int(tdee))} {round_value(protein_grams)} {round_value(fat_grams)} {round_value(carbs_grams)} {round_value(water)}"
+            update_command = f"/set {round_value(int(tdee))} {round_value(protein_grams)} {round_value(fat_grams)} {round_value(carbs_grams)} {round_value(water)}"
             auto_update_message = get_translation(
                 user_language,
                 "auto_update_info",
@@ -994,9 +994,10 @@ async def calculate_info(message: types.Message):
         logger.debug(f"Error in calculate_info: {e}")
         await handle_error_with_usage(message)
 
-@dp.message_handler(commands=["get_info"])
+
+@dp.message_handler(commands=["get"])
 async def get_info(message: types.Message):
-    logger.debug(f"User {message.from_user.id} issued /get_info command.")
+    logger.debug(f"User {message.from_user.id} issued /get command.")
     try:
         async with get_db_session() as session:
             user = await get_or_create_user(session, message.from_user.id)
@@ -1029,9 +1030,9 @@ async def get_info(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["user_count"])
+@dp.message_handler(commands=["count"])
 async def user_count(message: types.Message):
-    logger.debug(f"User {message.from_user.id} issued /user_count command.")
+    logger.debug(f"User {message.from_user.id} issued /count command.")
 
     try:
         async with get_db_session() as session:
@@ -1052,9 +1053,9 @@ async def user_count(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["get_daily_progress"])
+@dp.message_handler(commands=["progress"])
 async def get_daily_progress(message: types.Message):
-    logger.debug(f"User {message.from_user.id} issued /get_daily_progress command.")
+    logger.debug(f"User {message.from_user.id} issued /progress command.")
 
     try:
         async with get_db_session() as session:
@@ -1153,9 +1154,9 @@ async def get_daily_progress(message: types.Message):
         await handle_error_with_usage(message)
 
 
-@dp.message_handler(commands=["reset_daily_progress"])
+@dp.message_handler(commands=["reset"])
 async def reset_daily_progress(message: types.Message):
-    logger.debug(f"User {message.from_user.id} issued /reset_daily_progress command.")
+    logger.debug(f"User {message.from_user.id} issued /reset command.")
     try:
         async with get_db_session() as session:
             user = await get_or_create_user(session, message.from_user.id)
