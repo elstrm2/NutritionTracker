@@ -333,7 +333,7 @@ def get_utc_now():
 
 def round_value(value):
     if isinstance(value, float):
-        return round(value, 2)
+        return round(value, 1)
     return value
 
 
