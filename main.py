@@ -158,7 +158,7 @@ translations = {
             "Carbohydrates: {carbs_eaten} out of {carbs_total} g (remaining: {carbs_remaining} g)\n\n"
             "Water: {water_drank} out of {water_total} liters (remaining: {water_remaining} liters)"
         ),
-        "daily_food_and_water_log": "Detailed daily log of food and water intake:",
+        "daily_food_and_water_log": "Detailed log of food and water intake for {date}:",
         "get_daily_progress_usage": "Usage: /get_daily_progress [date]. Example: /get_daily_progress 2023-10-15",
         "user_count_message": "The total number of users is {count}.",
     },
@@ -240,7 +240,7 @@ translations = {
             "Углеводы: {carbs_eaten} из {carbs_total} г (осталось: {carbs_remaining} г)\n\n"
             "Вода: выпито {water_drank} из {water_total} литров (осталось: {water_remaining} литров)"
         ),
-        "daily_food_and_water_log": "Поштучный отчет о потреблении пищи и воды за день:",
+        "daily_food_and_water_log": "Подробный отчет о потреблении пищи и воды за {date}:",
         "get_daily_progress_usage": "Использование: /get_daily_progress [дата]. Пример: /get_daily_progress 2023-10-15",
         "user_count_message": "Общее количество пользователей: {count}.",
     },
@@ -462,7 +462,7 @@ async def add_food(message: types.Message):
             user = await get_or_create_user(session, message.from_user.id)
 
             data = message.text.split(" ")[1:]
-            if len(data) < 5:
+            if len(data) < 4:
                 await message.reply(get_translation(user.language, "add_food_usage"))
                 return
 
@@ -470,6 +470,7 @@ async def add_food(message: types.Message):
             protein_per_100g = float(data[1])
             fat_per_100g = float(data[2])
             carbs_per_100g = float(data[3])
+
             comment = " ".join(data[4:]) if len(data) > 4 else ""
 
             protein = (protein_per_100g * grams_eaten) / 100
@@ -696,7 +697,9 @@ async def get_daily_log(message: types.Message):
             ]
 
             if food_data or water_data:
-                header = f"Log for {target_date}:"
+                header = get_translation(
+                    user.language, "daily_food_and_water_log", date=target_date
+                )
                 all_data = "\n".join(food_data + water_data)
                 message_text = f"{header}\n{all_data}"
                 while message_text:
@@ -981,17 +984,15 @@ async def calculate_info(message: types.Message):
             )
 
             update_command = f"/set_info {round_value(int(tdee))} {round_value(protein_grams)} {round_value(fat_grams)} {round_value(carbs_grams)} {round_value(water)}"
-            auto_update_message = f"```{update_command}```"
-            await message.reply(
-                get_translation(
-                    user_language, "auto_update_info", command=auto_update_message
-                ),
-                parse_mode="Markdown",
+            auto_update_message = get_translation(
+                user_language,
+                "auto_update_info",
+                command=f"```copy\n{update_command}\n```",
             )
+            await message.reply(auto_update_message, parse_mode="Markdown")
     except Exception as e:
         logger.debug(f"Error in calculate_info: {e}")
         await handle_error_with_usage(message)
-
 
 @dp.message_handler(commands=["get_info"])
 async def get_info(message: types.Message):
@@ -999,26 +1000,29 @@ async def get_info(message: types.Message):
     try:
         async with get_db_session() as session:
             user = await get_or_create_user(session, message.from_user.id)
-            if (
-                user.calories is None
-                or user.protein is None
-                or user.fat is None
-                or user.carbohydrates is None
-                or user.water is None
-            ):
+
+            stmt = (
+                select(InfoLog)
+                .where(InfoLog.user_id == user.id)
+                .order_by(InfoLog.date.desc())
+                .limit(1)
+            )
+            result = await session.execute(stmt)
+            info_log = result.scalars().first()
+
+            if not info_log:
                 await message.reply(get_translation(user.language, "enter_data_first"))
                 return
 
             info_message = get_translation(
                 user.language,
                 "current_info_message",
-                calories=round_value(user.calories),
-                protein=round_value(user.protein),
-                fat=round_value(user.fat),
-                carbohydrates=round_value(user.carbohydrates),
-                water=round_value(user.water),
+                calories=round_value(info_log.calories),
+                protein=round_value(info_log.protein),
+                fat=round_value(info_log.fat),
+                carbohydrates=round_value(info_log.carbohydrates),
+                water=round_value(info_log.water),
             )
-
             await message.reply(info_message)
     except Exception as e:
         logger.debug(f"Error in get_info: {e}")
