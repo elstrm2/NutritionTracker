@@ -1,0 +1,11 @@
+start - restart the bot
+set_timezone - change timezone
+set_language - change language
+set_info - set nutrition info
+add_food - log food intake
+add_water - log water intake
+get_daily_log - view daily log
+get_daily_progress - view daily progress
+reset_daily_progress - reset today's log
+calculate_info - calculate nutrition needs
+user_count - show user count
