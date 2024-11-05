@@ -1,7 +1,7 @@
 .env
 deploy.bat
 connect.bat
-fix.bat
+fix_known_hosts.bat
 initial_server_setup.bat
 setup.sh
 Dockerfile
