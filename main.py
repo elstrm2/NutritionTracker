@@ -5,17 +5,14 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 import redis.asyncio as redis
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, time
 import pytz
 from sqlalchemy.sql import func
 import re
 from sqlalchemy.future import select
-import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
-from sqlalchemy.sql import func
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
 load_dotenv()
@@ -35,7 +32,7 @@ if db_password:
 else:
     DATABASE_URL = f"postgresql+asyncpg://{db_user}@{db_host}:{db_port}/{db_name}"
 
-logging.basicConfig(level=getattr(logging, DEBUG_LEVEL))
+logging.basicConfig(level=getattr(logging, DEBUG_LEVEL, logging.INFO))
 logger = logging.getLogger(__name__)
 
 pool_size = int(os.getenv("DB_POOL_SIZE"))
@@ -63,21 +60,23 @@ if DEBUG_LEVEL == "DEBUG":
 redis_host = os.getenv("REDIS_HOST")
 redis_port = int(os.getenv("REDIS_PORT"))
 redis_password = os.getenv("REDIS_PASSWORD")
+redis_db = int(os.getenv("REDIS_DB"))
 
 if redis_password:
     redis_client = redis.Redis(
         host=redis_host,
         port=redis_port,
         password=redis_password,
+        db=redis_db,
         decode_responses=True,
     )
 else:
     redis_client = redis.Redis(
         host=redis_host,
         port=redis_port,
+        db=redis_db,
         decode_responses=True,
     )
-
 
 translations = {
     "en": {
@@ -90,7 +89,7 @@ translations = {
         "calories_mismatch": "The total calories from protein, fat, and carbs do not match the provided calories.",
         "water_added": "You have added {water} liters of water.",
         "food_added": "You have added food with {calories} calories.",
-        "invalid_timezone": "Invalid timezone format. Please use UTC±00 format. Example: UTC+03 or UTC-02.",
+        "invalid_timezone": "Invalid timezone format. Please use UTC±HH or UTC±HH:MM format. Examples: UTC+03, UTC-02, UTC+05:30.",
         "timezone_set": "Timezone set to {timezone}.",
         "invalid_language": "Invalid language. Only 'en' and 'ru' are available.",
         "language_changed": "Language changed to {language}.",
@@ -102,13 +101,13 @@ translations = {
             "Usage: /food <grams_eaten> <protein_per_100g> <fat_per_100g> <carbs_per_100g> [comment].\n"
             "Example: /food 150 10 5 20 Delicious porridge."
         ),
-        "set_timezone_usage": "Usage: /time <timezone>. Example: /time UTC+03",
+        "set_timezone_usage": "Usage: /time <timezone>. Examples: /time UTC+03, /time UTC-05:30",
         "set_language_usage": "Usage: /lang <en/ru>. Example: /lang ru",
         "add_water_usage": "Usage: /water <liters>. Example: /water 2.5",
         "get_daily_log_usage": "Usage: /log [date]. Example: /log 2023-10-15",
         "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD.",
-        "food_entry": "Food: {calories} kcal, P: {protein}, F: {fat}, C: {carbohydrates}, Comment: {comment}",
-        "water_entry": "Water: {water} liters",
+        "food_entry": "[{time}] Food: {calories} kcal, P: {protein}, F: {fat}, C: {carbohydrates}, Comment: {comment}",
+        "water_entry": "[{time}] Water: {water} liters",
         "calculate_info_usage": (
             "Usage: /calc <age> <weight> <height> <metabolism> <activity> <goal> <desire> <diet_type> <gender> <body_fat> <climate> <rhr>.\n\n"
             "Parameters:\n"
@@ -161,6 +160,9 @@ translations = {
         "daily_food_and_water_log": "Detailed log of food and water intake for {date}:",
         "get_daily_progress_usage": "Usage: /progress [date]. Example: /progress 2023-10-15",
         "user_count_message": "The total number of users is {count}.",
+        "invalid_grams_eaten": "Invalid grams eaten. Please enter a value between 1 and 100000 grams.",
+        "invalid_macros": "Invalid values for protein, fat, or carbohydrates. Each should be between 0 and 100000.",
+        "no_non_zero_macro": "At least one of protein, fat, or carbohydrates must be greater than zero.",
     },
     "ru": {
         "start": "Привет! Я помогу тебе отслеживать калории и воду. Введи свои данные через команду /set.",
@@ -172,7 +174,7 @@ translations = {
         "calories_mismatch": "Сумма калорий из белков, жиров и углеводов не совпадает с указанными калориями.",
         "water_added": "Ты добавил {water} литров воды.",
         "food_added": "Ты добавил еду с {calories} калориями.",
-        "invalid_timezone": "Неверный формат часового пояса. Используй формат UTC±00. Пример: UTC+03 или UTC-02.",
+        "invalid_timezone": "Неверный формат часового пояса. Используй формат UTC±HH или UTC±HH:MM. Примеры: UTC+03, UTC-02, UTC+05:30.",
         "timezone_set": "Часовой пояс установлен на {timezone}.",
         "invalid_language": "Неверный язык. Доступны только 'en' и 'ru'.",
         "language_changed": "Язык изменен на {language}.",
@@ -184,13 +186,13 @@ translations = {
             "Использование: /food <съеденные_граммы> <белки_на_100г> <жиры_на_100г> <углеводы_на_100г> [комментарий].\n"
             "Пример: /food 150 10 5 20 Вкусная каша."
         ),
-        "set_timezone_usage": "Использование: /time <часовой пояс>. Пример: /time UTC+03",
+        "set_timezone_usage": "Использование: /time <часовой пояс>. Примеры: /time UTC+03, /time UTC-05:30",
         "set_language_usage": "Использование: /lang <en/ru>. Пример: /lang ru",
         "add_water_usage": "Использование: /water <литры>. Пример: /water 2.5",
         "get_daily_log_usage": "Использование: /log [дата]. Пример: /log 2023-10-15",
         "invalid_date_format": "Неверный формат даты. Пожалуйста, используй формат ГГГГ-ММ-ДД.",
-        "food_entry": "Еда: {calories} ккал, Б: {protein}, Ж: {fat}, У: {carbohydrates}, Комментарий: {comment}",
-        "water_entry": "Вода: {water} литров",
+        "food_entry": "[{time}] Еда: {calories} ккал, Б: {protein}, Ж: {fat}, У: {carbohydrates}, Комментарий: {comment}",
+        "water_entry": "[{time}] Вода: {water} литров",
         "calculate_info_usage": (
             "Использование: /calc <возраст> <вес> <рост> <метаболизм> <активность> <цель> <желание> <тип_диеты> <пол> <жирность_тела> <климат> <пульс_в_покое>.\n\n"
             "Параметры:\n"
@@ -218,7 +220,7 @@ translations = {
         "invalid_goal": "Неверная цель. Пожалуйста, введи -1 для похудения, 0 для поддержания или +1 для набора веса, или '-' если опционально.",
         "invalid_desire": "Неверное желание. Пожалуйста, введи значение от 1 до 10 или '-' если ты не хочешь менять вес.",
         "invalid_diet_type": "Неверный тип диеты. Пожалуйста, введи 0 для базовой, 1 для белковой, 2 для жирной или 3 для углеводистой диеты, или '-' если опционально.",
-        "invalid_gender": "Неверный пол. Пожалуйста, введи 'm' для мужского или 'f' для женского, или '-' если опционально.",
+        "invalid_gender": "Неверный пол. Пожалуйста, введи 'm' для мужского, 'f' для женского или '-' если опционально.",
         "invalid_body_fat": "Неверный процент жира в теле. Введи значение от 0.1 до 100 или '-' если не применяется.",
         "invalid_climate": "Неверное значение климата. Пожалуйста, введи -1 для холодного, 0 для влажного или +1 для жаркого, или '-' если опционально.",
         "invalid_rhr": "Неверный пульс в покое. Введи значение от 40 до 140, или '-' если не применяется.",
@@ -243,6 +245,9 @@ translations = {
         "daily_food_and_water_log": "Подробный отчет о потреблении пищи и воды за {date}:",
         "get_daily_progress_usage": "Использование: /progress [дата]. Пример: /progress 2023-10-15",
         "user_count_message": "Общее количество пользователей: {count}.",
+        "invalid_grams_eaten": "Неверное количество грамм. Пожалуйста, введи значение от 1 до 100000 грамм.",
+        "invalid_macros": "Неверные значения для белков, жиров или углеводов. Каждое должно быть от 0 до 100000.",
+        "no_non_zero_macro": "Хотя бы одно из значений белков, жиров или углеводов должно быть больше нуля.",
     },
 }
 
@@ -251,53 +256,55 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     telegram_id = Column(Integer, unique=True, nullable=False)
-    timezone = Column(String, default="UTC")
-    language = Column(String, default="en")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    timezone = Column(String, default="UTC", nullable=False)
+    language = Column(String, default="en", nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class InfoLog(Base):
     __tablename__ = "info_log"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    calories = Column(Float)
-    protein = Column(Float)
-    fat = Column(Float)
-    carbohydrates = Column(Float)
-    water = Column(Float)
-    date = Column(DateTime(timezone=True), server_default=func.now())
+    calories = Column(Float, default=0.0, nullable=False)
+    protein = Column(Float, default=0.0, nullable=False)
+    fat = Column(Float, default=0.0, nullable=False)
+    carbohydrates = Column(Float, default=0.0, nullable=False)
+    water = Column(Float, default=0.0, nullable=False)
+    date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class FoodLog(Base):
     __tablename__ = "food_log"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    date = Column(DateTime(timezone=True), server_default=func.now())
-    calories = Column(Float)
-    protein = Column(Float)
-    fat = Column(Float)
-    carbohydrates = Column(Float)
-    comment = Column(String)
+    date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    calories = Column(Float, default=0.0, nullable=False)
+    protein = Column(Float, default=0.0, nullable=False)
+    fat = Column(Float, default=0.0, nullable=False)
+    carbohydrates = Column(Float, default=0.0, nullable=False)
+    comment = Column(String, default="", nullable=False)
 
 
 class WaterLog(Base):
     __tablename__ = "water_log"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    date = Column(DateTime(timezone=True), server_default=func.now())
-    water = Column(Float)
+    date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    water = Column(Float, default=0.0, nullable=False)
 
 
 class DailySummary(Base):
     __tablename__ = "daily_summary"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    date = Column(DateTime(timezone=True), server_default=func.now())
-    total_calories = Column(Float, default=0.0)
-    total_protein = Column(Float, default=0.0)
-    total_fat = Column(Float, default=0.0)
-    total_carbohydrates = Column(Float, default=0.0)
-    total_water = Column(Float, default=0.0)
+    date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    total_calories = Column(Float, default=0.0, nullable=False)
+    total_protein = Column(Float, default=0.0, nullable=False)
+    total_fat = Column(Float, default=0.0, nullable=False)
+    total_carbohydrates = Column(Float, default=0.0, nullable=False)
+    total_water = Column(Float, default=0.0, nullable=False)
 
 
 @asynccontextmanager
@@ -337,31 +344,44 @@ def round_value(value):
     return value
 
 
-def convert_to_user_timezone(utc_time, timezone):
-    if not timezone or timezone == "UTC":
-        logger.debug(f"No valid timezone provided or incorrect format: {timezone}")
-        return utc_time
-    try:
-        if timezone.startswith("UTC"):
-            offset_str = timezone[3:]
-            if not offset_str or offset_str in [
-                "+",
-                "-",
-            ]:
-                raise ValueError("Empty or incomplete timezone offset.")
-            hours_offset = int(offset_str)
-            tz = pytz.FixedOffset(hours_offset * 60)
-        else:
-            tz = pytz.timezone(timezone)
-        return utc_time.astimezone(tz)
-    except ValueError as e:
-        logger.debug(
-            f"Error converting timezone with ValueError: {e}, input was '{timezone}'"
-        )
-        return utc_time
+def get_user_timezone(timezone_str: str):
+    excluded_timezones = ["UTC", "UTC+00", "UTC-00"]
+    if timezone_str in excluded_timezones:
+        return pytz.utc
+    elif timezone_str.startswith("UTC"):
+        try:
+            match = re.match(r"^UTC([+-])(\d{2})(?::(\d{2}))?$", timezone_str)
+            if not match:
+                raise ValueError("Invalid timezone format.")
+
+            sign, hours, minutes = match.groups()
+            hours = int(hours)
+            minutes = int(minutes) if minutes else 0
+
+            if hours > 14 or minutes >= 60:
+                raise ValueError("Invalid timezone offset values.")
+
+            total_minutes = hours * 60 + minutes
+            if sign == "-":
+                total_minutes = -total_minutes
+
+            return pytz.FixedOffset(total_minutes)
+        except ValueError as e:
+            logger.debug(
+                f"Invalid timezone format: {timezone_str}. Error: {e}. Defaulting to UTC."
+            )
+            return pytz.utc
+    else:
+        logger.debug(f"Unsupported timezone format: {timezone_str}. Defaulting to UTC.")
+        return pytz.utc
 
 
-async def get_or_create_user(session, telegram_id: int) -> User:
+def convert_to_user_timezone(utc_time, timezone_str):
+    user_timezone = get_user_timezone(timezone_str)
+    return utc_time.astimezone(user_timezone)
+
+
+async def get_or_create_user(session, telegram_id: int):
     stmt = select(User).where(User.telegram_id == telegram_id)
     result = await session.execute(stmt)
     user = result.scalars().first()
@@ -373,12 +393,11 @@ async def get_or_create_user(session, telegram_id: int) -> User:
     return user
 
 
-async def handle_error_with_usage(message: types.Message):
+async def handle_error(message: types.Message):
     async with get_db_session() as session:
-        user = await session.execute(
-            select(User).where(User.telegram_id == message.from_user.id)
-        )
-        user = user.scalars().first()
+        stmt = select(User).where(User.telegram_id == message.from_user.id)
+        result = await session.execute(stmt)
+        user = result.scalars().first()
         user_language = (
             user.language if user and user.language in translations else "en"
         )
@@ -407,11 +426,27 @@ async def set_info(message: types.Message):
                 await message.reply(get_translation(user.language, "set_info_usage"))
                 return
 
-            calories = float(data[0])
-            protein = float(data[1])
-            fat = float(data[2])
-            carbs = float(data[3])
-            water = float(data[4])
+            try:
+                calories = float(data[0])
+            except ValueError:
+                await message.reply(get_translation(user.language, "invalid_calories"))
+                return
+
+            try:
+                protein = float(data[1])
+                fat = float(data[2])
+                carbs = float(data[3])
+            except ValueError:
+                await message.reply(
+                    get_translation(user.language, "invalid_protein_fat_carbs")
+                )
+                return
+
+            try:
+                water = float(data[4])
+            except ValueError:
+                await message.reply(get_translation(user.language, "invalid_water"))
+                return
 
             total_calories = (protein * 4) + (fat * 9) + (carbs * 4)
             if abs(total_calories - calories) > 10:
@@ -432,7 +467,7 @@ async def set_info(message: types.Message):
                 await message.reply(get_translation(user.language, "invalid_water"))
                 return
 
-            current_time = convert_to_user_timezone(get_utc_now(), user.timezone)
+            current_time = get_utc_now()
 
             info_log = InfoLog(
                 user_id=user.id,
@@ -449,7 +484,7 @@ async def set_info(message: types.Message):
             await message.reply(get_translation(user.language, "data_updated"))
     except Exception as e:
         logger.debug(f"Error in set_info: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["food"])
@@ -466,10 +501,40 @@ async def add_food(message: types.Message):
                 await message.reply(get_translation(user.language, "add_food_usage"))
                 return
 
-            grams_eaten = float(data[0])
-            protein_per_100g = float(data[1])
-            fat_per_100g = float(data[2])
-            carbs_per_100g = float(data[3])
+            try:
+                grams_eaten = float(data[0])
+                if not (1 <= grams_eaten <= 100000):
+                    await message.reply(
+                        get_translation(user.language, "invalid_grams_eaten")
+                    )
+                    return
+            except ValueError:
+                await message.reply(
+                    get_translation(user.language, "invalid_grams_eaten")
+                )
+                return
+
+            try:
+                protein_per_100g = float(data[1])
+                fat_per_100g = float(data[2])
+                carbs_per_100g = float(data[3])
+                if not (
+                    0 <= protein_per_100g <= 100000
+                    and 0 <= fat_per_100g <= 100000
+                    and 0 <= carbs_per_100g <= 100000
+                ):
+                    await message.reply(
+                        get_translation(user.language, "invalid_macros")
+                    )
+                    return
+                if not (protein_per_100g > 0 or fat_per_100g > 0 or carbs_per_100g > 0):
+                    await message.reply(
+                        get_translation(user.language, "no_non_zero_macro")
+                    )
+                    return
+            except ValueError:
+                await message.reply(get_translation(user.language, "invalid_macros"))
+                return
 
             comment = " ".join(data[4:]) if len(data) > 4 else ""
 
@@ -478,21 +543,11 @@ async def add_food(message: types.Message):
             carbs = (carbs_per_100g * grams_eaten) / 100
             calories = (protein * 4) + (fat * 9) + (carbs * 4)
 
-            if not (10 <= calories <= 100000):
-                await message.reply(get_translation(user.language, "invalid_calories"))
-                return
-            if not (
-                0 <= protein <= 100000 and 0 <= fat <= 100000 and 0 <= carbs <= 100000
-            ):
-                await message.reply(
-                    get_translation(user.language, "invalid_protein_fat_carbs")
-                )
-                return
             if len(comment) > 100:
                 await message.reply(get_translation(user.language, "invalid_comment"))
                 return
 
-            current_time = convert_to_user_timezone(get_utc_now(), user.timezone)
+            current_time = get_utc_now()
             food_log = FoodLog(
                 user_id=user.id,
                 calories=calories,
@@ -504,14 +559,24 @@ async def add_food(message: types.Message):
             )
             session.add(food_log)
 
+            target_date = convert_to_user_timezone(current_time, user.timezone).date()
+
             stmt = select(DailySummary).where(
                 DailySummary.user_id == user.id,
-                func.date(DailySummary.date) == current_time.date(),
+                func.date(DailySummary.date) == target_date,
             )
             result = await session.execute(stmt)
             daily_summary = result.scalars().first()
             if not daily_summary:
-                daily_summary = DailySummary(user_id=user.id, date=current_time)
+                daily_summary = DailySummary(
+                    user_id=user.id,
+                    date=current_time,
+                    total_calories=0.0,
+                    total_protein=0.0,
+                    total_fat=0.0,
+                    total_carbohydrates=0.0,
+                    total_water=0.0,
+                )
                 session.add(daily_summary)
 
             daily_summary.total_calories += calories
@@ -528,7 +593,7 @@ async def add_food(message: types.Message):
             )
     except Exception as e:
         logger.debug(f"Error in add_food: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["water"])
@@ -545,30 +610,38 @@ async def add_water(message: types.Message):
                 await message.reply(get_translation(user.language, "add_water_usage"))
                 return
 
-            water = float(data[1])
-            if not (0.1 <= water <= 100):
+            try:
+                water = float(data[1])
+                if not (0.1 <= water <= 100):
+                    await message.reply(get_translation(user.language, "invalid_water"))
+                    return
+            except ValueError:
                 await message.reply(get_translation(user.language, "invalid_water"))
                 return
 
-            current_time = convert_to_user_timezone(get_utc_now(), user.timezone)
+            current_time = get_utc_now()
             water_log = WaterLog(user_id=user.id, water=water, date=current_time)
             session.add(water_log)
 
+            target_date = convert_to_user_timezone(current_time, user.timezone).date()
+
             stmt = select(DailySummary).where(
                 DailySummary.user_id == user.id,
-                func.date(DailySummary.date) == current_time.date(),
+                func.date(DailySummary.date) == target_date,
             )
             result = await session.execute(stmt)
             daily_summary = result.scalars().first()
             if not daily_summary:
-                daily_summary = DailySummary(user_id=user.id, date=current_time)
+                daily_summary = DailySummary(
+                    user_id=user.id,
+                    date=current_time,
+                    total_calories=0.0,
+                    total_protein=0.0,
+                    total_fat=0.0,
+                    total_carbohydrates=0.0,
+                    total_water=0.0,
+                )
                 session.add(daily_summary)
-
-            daily_summary.total_calories = daily_summary.total_calories or 0.0
-            daily_summary.total_protein = daily_summary.total_protein or 0.0
-            daily_summary.total_fat = daily_summary.total_fat or 0.0
-            daily_summary.total_carbohydrates = daily_summary.total_carbohydrates or 0.0
-            daily_summary.total_water = daily_summary.total_water or 0.0
 
             daily_summary.total_water += water
             await session.commit()
@@ -578,7 +651,7 @@ async def add_water(message: types.Message):
             )
     except Exception as e:
         logger.debug(f"Error in add_water: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["time"])
@@ -598,7 +671,7 @@ async def set_timezone(message: types.Message):
                 return
 
             timezone = data[1]
-            if not re.match(r"^UTC[+-](0[0-9]|1[0-4])$", timezone):
+            if not re.match(r"^UTC([+-]\d{2}(?::\d{2})?)?$", timezone):
                 await message.reply(get_translation(user.language, "invalid_timezone"))
                 return
 
@@ -609,7 +682,7 @@ async def set_timezone(message: types.Message):
             )
     except Exception as e:
         logger.debug(f"Error in set_timezone: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["lang"])
@@ -636,7 +709,7 @@ async def set_language(message: types.Message):
             )
     except Exception as e:
         logger.debug(f"Error in set_language: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["log"])
@@ -668,49 +741,90 @@ async def get_daily_log(message: types.Message):
                 )
                 return
 
+            user_timezone_str = user.timezone
+            user_timezone = get_user_timezone(user_timezone_str)
+
+            start_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.min)
+            ).astimezone(pytz.utc)
+            end_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.max)
+            ).astimezone(pytz.utc)
+
             food_stmt = select(FoodLog).where(
-                FoodLog.user_id == user.id, func.date(FoodLog.date) == target_date
+                FoodLog.user_id == user.id,
+                FoodLog.date >= start_datetime,
+                FoodLog.date <= end_datetime,
             )
+
             water_stmt = select(WaterLog).where(
-                WaterLog.user_id == user.id, func.date(WaterLog.date) == target_date
+                WaterLog.user_id == user.id,
+                WaterLog.date >= start_datetime,
+                WaterLog.date <= end_datetime,
             )
             food_logs = await session.execute(food_stmt)
             water_logs = await session.execute(water_stmt)
 
-            food_data = [
-                get_translation(
-                    user.language,
-                    "food_entry",
-                    calories=round_value(log.calories),
-                    protein=round_value(log.protein),
-                    fat=round_value(log.fat),
-                    carbohydrates=round_value(log.carbohydrates),
-                    comment=log.comment if log.comment else "-",
-                )
-                for log in food_logs.scalars().all()
-            ]
-            water_data = [
-                get_translation(
-                    user.language, "water_entry", water=round_value(log.water)
-                )
-                for log in water_logs.scalars().all()
-            ]
+            combined_logs = []
 
-            if food_data or water_data:
+            for log in food_logs.scalars().all():
+                combined_logs.append({"type": "food", "date": log.date, "data": log})
+
+            for log in water_logs.scalars().all():
+                combined_logs.append({"type": "water", "date": log.date, "data": log})
+
+            combined_logs.sort(key=lambda x: x["date"])
+
+            formatted_entries = []
+            for entry in combined_logs:
+                log_time_utc = entry["date"]
+                local_time = convert_to_user_timezone(log_time_utc, user.timezone)
+
+                if user.language == "en":
+                    time_str = local_time.strftime("%I:%M %p")
+                else:
+                    time_str = local_time.strftime("%H:%M")
+
+                if entry["type"] == "food":
+                    log = entry["data"]
+                    formatted_entries.append(
+                        get_translation(
+                            user.language,
+                            "food_entry",
+                            time=time_str,
+                            calories=round_value(log.calories),
+                            protein=round_value(log.protein),
+                            fat=round_value(log.fat),
+                            carbohydrates=round_value(log.carbohydrates),
+                            comment=log.comment if log.comment else "-",
+                        )
+                    )
+                elif entry["type"] == "water":
+                    log = entry["data"]
+                    formatted_entries.append(
+                        get_translation(
+                            user.language,
+                            "water_entry",
+                            time=time_str,
+                            water=round_value(log.water),
+                        )
+                    )
+
+            if formatted_entries:
                 header = get_translation(
                     user.language, "daily_food_and_water_log", date=target_date
                 )
-                all_data = "\n".join(food_data + water_data)
+                all_data = "\n".join(formatted_entries)
                 message_text = f"{header}\n{all_data}"
                 while message_text:
                     part, message_text = message_text[:4096], message_text[4096:]
                     await message.reply(part)
             else:
-                await message.reply(f"No data found for {target_date}.")
+                await message.reply(get_translation(user.language, "no_data_for_date"))
 
     except Exception as e:
         logger.debug(f"Error in get_daily_log: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["calc"])
@@ -905,20 +1019,13 @@ async def calculate_info(message: types.Message):
                     await message.reply(get_translation(user_language, "invalid_rhr"))
                     return
 
-            if age > 60:
-                metabolism_adjustment = 0.95
-            else:
-                metabolism_adjustment = 1.0
+            metabolism_adjustment = 0.95 if age > 60 else 1.0
 
-            if gender == "f" and age >= 50:
-                menopause_adjustment = 0.9
-            else:
-                menopause_adjustment = 1.0
+            menopause_adjustment = 0.9 if gender == "f" and age >= 50 else 1.0
 
-            if resting_heart_rate:
-                heart_rate_adjustment = 70 / resting_heart_rate
-            else:
-                heart_rate_adjustment = 1.0
+            heart_rate_adjustment = (
+                70 / resting_heart_rate if resting_heart_rate else 1.0
+            )
 
             if gender is None:
                 bmr_mifflin_m = 10 * weight + 6.25 * height - 5 * age + 5
@@ -992,7 +1099,7 @@ async def calculate_info(message: types.Message):
             await message.reply(auto_update_message, parse_mode="Markdown")
     except Exception as e:
         logger.debug(f"Error in calculate_info: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["get"])
@@ -1027,7 +1134,7 @@ async def get_info(message: types.Message):
             await message.reply(info_message)
     except Exception as e:
         logger.debug(f"Error in get_info: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["count"])
@@ -1050,7 +1157,7 @@ async def user_count(message: types.Message):
             )
     except Exception as e:
         logger.debug(f"Error in user_count: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["progress"])
@@ -1082,10 +1189,22 @@ async def get_daily_progress(message: types.Message):
                 )
                 return
 
+            user_timezone_str = user.timezone
+            user_timezone = get_user_timezone(user_timezone_str)
+
+            start_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.min)
+            ).astimezone(pytz.utc)
+            end_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.max)
+            ).astimezone(pytz.utc)
+
             stmt_info = (
                 select(InfoLog)
                 .where(
-                    InfoLog.user_id == user.id, func.date(InfoLog.date) == target_date
+                    InfoLog.user_id == user.id,
+                    InfoLog.date >= start_datetime,
+                    InfoLog.date <= end_datetime,
                 )
                 .order_by(InfoLog.date.desc())
                 .limit(1)
@@ -1099,7 +1218,8 @@ async def get_daily_progress(message: types.Message):
 
             stmt_summary = select(DailySummary).where(
                 DailySummary.user_id == user.id,
-                func.date(DailySummary.date) == target_date,
+                DailySummary.date >= start_datetime,
+                DailySummary.date <= end_datetime,
             )
             result_summary = await session.execute(stmt_summary)
             daily_summary = result_summary.scalars().first()
@@ -1151,7 +1271,7 @@ async def get_daily_progress(message: types.Message):
 
     except Exception as e:
         logger.debug(f"Error in get_daily_progress: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 @dp.message_handler(commands=["reset"])
@@ -1161,13 +1281,25 @@ async def reset_daily_progress(message: types.Message):
         async with get_db_session() as session:
             user = await get_or_create_user(session, message.from_user.id)
 
-            current_time = convert_to_user_timezone(get_utc_now(), user.timezone)
-            current_date = current_time.date()
+            current_time = get_utc_now()
+            target_date = convert_to_user_timezone(current_time, user.timezone).date()
+
+            user_timezone_str = user.timezone
+            user_timezone = get_user_timezone(user_timezone_str)
+
+            start_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.min)
+            ).astimezone(pytz.utc)
+            end_datetime = user_timezone.localize(
+                datetime.combine(target_date, time.max)
+            ).astimezone(pytz.utc)
 
             await session.execute(
                 delete(FoodLog)
                 .where(
-                    FoodLog.user_id == user.id, func.date(FoodLog.date) == current_date
+                    FoodLog.user_id == user.id,
+                    FoodLog.date >= start_datetime,
+                    FoodLog.date <= end_datetime,
                 )
                 .execution_options(synchronize_session=False)
             )
@@ -1175,14 +1307,17 @@ async def reset_daily_progress(message: types.Message):
                 delete(WaterLog)
                 .where(
                     WaterLog.user_id == user.id,
-                    func.date(WaterLog.date) == current_date,
+                    WaterLog.date >= start_datetime,
+                    WaterLog.date <= end_datetime,
                 )
                 .execution_options(synchronize_session=False)
             )
             await session.execute(
                 delete(InfoLog)
                 .where(
-                    InfoLog.user_id == user.id, func.date(InfoLog.date) == current_date
+                    InfoLog.user_id == user.id,
+                    InfoLog.date >= start_datetime,
+                    InfoLog.date <= end_datetime,
                 )
                 .execution_options(synchronize_session=False)
             )
@@ -1190,7 +1325,8 @@ async def reset_daily_progress(message: types.Message):
 
             stmt = select(DailySummary).where(
                 DailySummary.user_id == user.id,
-                func.date(DailySummary.date) == current_date,
+                DailySummary.date >= start_datetime,
+                DailySummary.date <= end_datetime,
             )
             result = await session.execute(stmt)
             daily_summary = result.scalars().first()
@@ -1204,7 +1340,7 @@ async def reset_daily_progress(message: types.Message):
             else:
                 daily_summary = DailySummary(
                     user_id=user.id,
-                    date=current_date,
+                    date=current_time,
                     total_calories=0.0,
                     total_protein=0.0,
                     total_fat=0.0,
@@ -1214,12 +1350,11 @@ async def reset_daily_progress(message: types.Message):
                 session.add(daily_summary)
 
             await session.commit()
-
             await message.reply(get_translation(user.language, "data_updated"))
 
     except Exception as e:
         logger.debug(f"Error in reset_daily_progress: {e}")
-        await handle_error_with_usage(message)
+        await handle_error(message)
 
 
 if __name__ == "__main__":

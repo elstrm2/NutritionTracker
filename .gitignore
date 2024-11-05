@@ -1,1 +1,9 @@
 .env
+deploy.bat
+connect.bat
+fix.bat
+initial_server_setup.bat
+setup.sh
+Dockerfile
+docker-compose.yml
+new_ssh_key
